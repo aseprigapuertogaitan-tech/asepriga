@@ -1,1 +1,12 @@
-[]
+[
+  {
+    "id": "1779858942411",
+    "numRegistro": 1,
+    "cedula": "4438681",
+    "nombres": "CARLOS ALBERTO QUIÑONES MUÑOZ",
+    "direccion": "MANZANA 59 CASA 10",
+    "telefono": "3228667346",
+    "fechaAfiliacion": "2026-02-01",
+    "fechaRegistro": "2026-05-27T05:15:42.411Z"
+  }
+]
