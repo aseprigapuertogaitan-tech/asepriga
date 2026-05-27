@@ -1,0 +1,125 @@
+<!DOCTYPE html>
+<html lang="es">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>ASEPRIGA - Inicio de Sesión</title>
+    <style>
+        * { margin: 0; padding: 0; box-sizing: border-box; font-family: 'Segoe UI', Roboto, sans-serif; }
+        body {
+            background: linear-gradient(135deg, #1a4a2a 0%, #2d8f56 100%);
+            min-height: 100vh; display: flex; align-items: center; justify-content: center; padding: 16px;
+        }
+        .login-container {
+            width: 100%; max-width: 380px; background: white; border-radius: 32px;
+            padding: 40px 28px; box-shadow: 0 20px 60px rgba(0,0,0,0.3);
+            animation: fadeInUp 0.4s ease;
+        }
+        @keyframes fadeInUp {
+            from { opacity: 0; transform: translateY(20px); }
+            to { opacity: 1; transform: translateY(0); }
+        }
+        .logo { text-align: center; margin-bottom: 24px; }
+        .logo h1 { font-size: 28px; color: #1a4a2a; font-weight: 800; }
+        .logo p { font-size: 13px; color: #5a8a5a; margin-top: 4px; }
+        .logo .fecha { font-size: 12px; font-weight: 700; color: #4a7a5a; margin-top: 6px; }
+        .input-group { margin-bottom: 18px; }
+        .input-group label { display: block; font-size: 13px; font-weight: 600; color: #2d6a4f; margin-bottom: 6px; }
+        .input-group input {
+            width: 100%; padding: 14px 16px; border: 1.5px solid #d4e6d4; border-radius: 14px;
+            font-size: 16px; transition: 0.2s; background: #f8fff8;
+        }
+        .input-group input:focus { outline: none; border-color: #1a4a2a; background: white; }
+        .login-btn {
+            width: 100%; padding: 14px; background: #1a4a2a; color: white; border: none;
+            border-radius: 14px; font-size: 16px; font-weight: 600; cursor: pointer; transition: 0.2s;
+        }
+        .login-btn:hover { background: #2d6a4f; }
+        .login-btn:active { transform: scale(0.97); }
+        .error-msg {
+            background: #ffe5e5; color: #c62828; padding: 10px; border-radius: 12px;
+            font-size: 13px; text-align: center; margin-top: 14px; display: none;
+        }
+        .user-info { text-align: center; margin-bottom: 20px; }
+        .user-info .icon { font-size: 48px; }
+        .enlaces { text-align: center; margin-top: 20px; padding-top: 16px; border-top: 1px solid #e0e8e0; }
+        .enlaces a { color: #2d6a4f; font-size: 13px; text-decoration: none; font-weight: 600; }
+        .enlaces a:hover { text-decoration: underline; }
+    </style>
+</head>
+<body>
+    <div class="login-container">
+        <div class="logo">
+            <h1>ASEPRIGA</h1>
+            <p>Sistema de Gestión</p>
+            <div class="fecha" id="fechaDisplay"></div>
+        </div>
+
+        <div class="user-info">
+            <div class="icon">🔐</div>
+        </div>
+
+        <div class="input-group">
+            <label>👤 Usuario</label>
+            <input type="text" id="usuarioInput" placeholder="Ingrese su usuario" autofocus>
+        </div>
+        <div class="input-group">
+            <label>🔑 Contraseña</label>
+            <input type="password" id="passwordInput" placeholder="Ingrese su contraseña">
+        </div>
+
+        <button class="login-btn" id="loginBtn">Ingresar</button>
+        <div id="loginError" class="error-msg">❌ Usuario o contraseña incorrectos</div>
+
+        <div class="enlaces">
+            <a href="consulta.html">🔍 Consulta de afiliados</a>
+        </div>
+    </div>
+
+    <script>
+        var USUARIOS = {
+            'Tesorera': { password: 'Tesorera', destino: 'sistema_recaudo.html', label: 'Tesorería - Recaudo' },
+            'Secretaria': { password: 'Secretaria', destino: 'sistema_afiliacion.html', label: 'Secretaría - Afiliaciones' }
+        };
+
+        function actualizarFecha() {
+            var d = new Date();
+            var opciones = { weekday: 'long', year: 'numeric', month: 'long', day: 'numeric' };
+            document.getElementById('fechaDisplay').textContent =
+                d.toLocaleDateString('es-ES', opciones).replace(/^\w/, function(c) { return c.toUpperCase(); });
+        }
+        actualizarFecha();
+
+        document.getElementById('loginBtn').addEventListener('click', function() {
+            var usuario = document.getElementById('usuarioInput').value.trim();
+            var password = document.getElementById('passwordInput').value.trim();
+            var errorDiv = document.getElementById('loginError');
+
+            if (USUARIOS[usuario] && USUARIOS[usuario].password === password) {
+                errorDiv.style.display = 'none';
+                sessionStorage.setItem('usuario_activo', usuario);
+                sessionStorage.setItem('usuario_rol', USUARIOS[usuario].label);
+                window.location.href = USUARIOS[usuario].destino;
+            } else {
+                errorDiv.style.display = 'block';
+                document.getElementById('passwordInput').value = '';
+                document.getElementById('passwordInput').focus();
+            }
+        });
+
+        document.getElementById('usuarioInput').addEventListener('input', function() {
+            document.getElementById('loginError').style.display = 'none';
+        });
+        document.getElementById('passwordInput').addEventListener('input', function() {
+            document.getElementById('loginError').style.display = 'none';
+        });
+
+        document.getElementById('passwordInput').addEventListener('keypress', function(e) {
+            if (e.key === 'Enter') document.getElementById('loginBtn').click();
+        });
+        document.getElementById('usuarioInput').addEventListener('keypress', function(e) {
+            if (e.key === 'Enter') document.getElementById('passwordInput').focus();
+        });
+    </script>
+</body>
+</html>

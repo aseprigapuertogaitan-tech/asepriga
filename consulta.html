@@ -1,0 +1,368 @@
+<!DOCTYPE html>
+<html lang="es">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0, maximum-scale=1.0, user-scalable=no">
+    <title>ASEPRIGA - Consulta</title>
+    <style>
+        * { margin: 0; padding: 0; box-sizing: border-box; font-family: 'Segoe UI', Roboto, sans-serif; }
+        body { background: #f0f4f0; min-height: 100vh; }
+        .header {
+            background: linear-gradient(135deg, #1a4a2a 0%, #2d8f56 100%); color: white;
+            padding: 48px 20px 20px; text-align: center;
+        }
+        .header h1 { font-size: 24px; font-weight: 800; }
+        .header .fecha { font-size: 12px; font-weight: 700; margin-top: 4px; opacity: 0.9; }
+        .header .sub { font-size: 13px; opacity: 0.8; margin-top: 2px; }
+        .container { max-width: 600px; margin: 0 auto; padding: 16px; }
+        .search-box {
+            background: white; border-radius: 16px; padding: 16px;
+            box-shadow: 0 2px 12px rgba(0,0,0,0.08); margin-bottom: 16px;
+        }
+        .search-row { display: flex; gap: 8px; }
+        .search-row input {
+            flex: 1; padding: 14px 16px; border: 1.5px solid #d4e6d4; border-radius: 12px;
+            font-size: 16px; transition: 0.2s;
+        }
+        .search-row input:focus { outline: none; border-color: #1a4a2a; }
+        .search-row button {
+            padding: 14px 20px; background: #1a4a2a; color: white; border: none; border-radius: 12px;
+            font-size: 15px; font-weight: 600; cursor: pointer; transition: 0.2s;
+        }
+        .search-row button:hover { background: #2d6a4f; }
+        .search-row button:active { transform: scale(0.97); }
+        .card {
+            background: white; border-radius: 16px; padding: 16px;
+            box-shadow: 0 2px 12px rgba(0,0,0,0.08); margin-bottom: 12px;
+            display: none;
+        }
+        .card.visible { display: block; }
+        .card-title {
+            font-size: 14px; color: #1a4a2a; font-weight: 700; margin-bottom: 12px;
+            border-bottom: 1.5px solid #e0e8e0; padding-bottom: 8px;
+        }
+        .info-row { display: flex; justify-content: space-between; padding: 6px 0; font-size: 15px; }
+        .info-row .label { color: #6a8a6a; }
+        .info-row .value { font-weight: 600; color: #1a3a1a; }
+        .estado-box {
+            text-align: center; padding: 16px; border-radius: 12px; font-size: 18px; font-weight: 800;
+        }
+        .estado-al-dia { background: #d4edda; color: #155724; }
+        .estado-mora { background: #ffe5e5; color: #c62828; }
+        .deuda-info { display: flex; justify-content: space-around; margin-top: 12px; }
+        .deuda-item { text-align: center; }
+        .deuda-item .num { font-size: 20px; font-weight: 800; color: #1a4a2a; }
+        .deuda-item .num.rojo { color: #c62828; }
+        .deuda-item .num.verde { color: #1a7a2a; }
+        .deuda-item .lbl { font-size: 11px; color: #6a8a6a; font-weight: 600; margin-top: 2px; }
+        .meses-lista { list-style: none; }
+        .meses-lista li {
+            display: flex; justify-content: space-between; align-items: center;
+            padding: 10px 12px; border-bottom: 1px solid #e8f0e8; font-size: 14px;
+        }
+        .meses-lista li:last-child { border-bottom: none; }
+        .meses-lista .mes-nombre { font-weight: 600; color: #1a3a1a; }
+        .meses-lista .mes-valor { font-weight: 700; color: #c62828; }
+        .pago-item {
+            padding: 10px 12px; border-bottom: 1px solid #e8f0e8; font-size: 14px;
+        }
+        .pago-item:last-child { border-bottom: none; }
+        .pago-item .pago-top { display: flex; justify-content: space-between; }
+        .pago-item .pago-recibo { font-weight: 700; color: #1a4a2a; }
+        .pago-item .pago-valor { font-weight: 700; color: #1a7a2a; }
+        .pago-item .pago-meses { color: #4a6a4a; font-size: 13px; margin-top: 2px; }
+        .pago-item .pago-fecha { color: #6a8a6a; font-size: 12px; }
+        .vacio { text-align: center; padding: 24px; color: #6a8a6a; font-size: 14px; }
+        .no-result {
+            display: none; text-align: center; padding: 40px 20px;
+        }
+        .no-result h3 { font-size: 18px; color: #1a4a2a; margin-bottom: 6px; }
+        .no-result p { color: #6a8a6a; font-size: 14px; }
+        .resultado { display: none; }
+        .resultado.visible { display: block; }
+        @media (max-width: 400px) {
+            .search-row button { padding: 14px 16px; font-size: 13px; }
+        }
+    </style>
+</head>
+<body>
+    <div class="header">
+        <h1>ASEPRIGA</h1>
+        <div class="fecha" id="fechaDisplay"></div>
+        <div class="sub">Consulta de Afiliados</div>
+    </div>
+
+    <div class="container">
+        <div class="search-box">
+            <div class="search-row">
+                <input type="text" id="buscarInput" placeholder="Cédula o nombre..." autofocus>
+                <button id="buscarBtn">Buscar</button>
+            </div>
+        </div>
+
+        <div class="resultado" id="resultado">
+            <div class="card visible" id="cardInfo">
+                <div class="card-title">📋 Datos del Afiliado</div>
+                <div id="infoContent"></div>
+            </div>
+
+            <div class="card" id="cardEstado">
+                <div class="card-title">💰 Estado de Cuenta</div>
+                <div id="estadoContent"></div>
+            </div>
+
+            <div class="card" id="cardMeses">
+                <div class="card-title">📅 Meses en Deuda</div>
+                <div id="mesesContent"></div>
+            </div>
+
+            <div class="card" id="cardHistorial">
+                <div class="card-title">📜 Historial de Pagos</div>
+                <div id="historialContent"></div>
+            </div>
+        </div>
+
+        <div class="no-result" id="noResult">
+            <h3>😕 Afiliado no encontrado</h3>
+            <p>Verifique la cédula o nombre e intente nuevamente.</p>
+        </div>
+    </div>
+
+    <script>
+        var MESES = ['Enero','Febrero','Marzo','Abril','Mayo','Junio','Julio','Agosto','Septiembre','Octubre','Noviembre','Diciembre'];
+        var VALOR_MENSUAL = 10000;
+
+        function actualizarFecha() {
+            var d = new Date();
+            document.getElementById('fechaDisplay').textContent =
+                d.toLocaleDateString('es-ES', { weekday: 'long', year: 'numeric', month: 'long', day: 'numeric' })
+                    .replace(/^\w/, function(c) { return c.toUpperCase(); });
+        }
+        actualizarFecha();
+
+        const GITHUB_OWNER = 'aseprigapuertogaitan-tech';
+        const GITHUB_REPO = 'asepriga';
+        const GITHUB_BRANCH = 'main';
+
+        function base64Decode(str) { return decodeURIComponent(escape(atob(str))); }
+
+        async function githubLeer(archivo) {
+            var r = await fetch('https://api.github.com/repos/' + GITHUB_OWNER + '/' + GITHUB_REPO + '/contents/' + archivo, {
+                headers: { 'Accept': 'application/vnd.github.v3+json' }
+            });
+            if (r.status === 404) return null;
+            if (!r.ok) throw new Error('Error al leer (' + r.status + ')');
+            var data = await r.json();
+            return { data: JSON.parse(base64Decode(data.content)), sha: data.sha };
+        }
+
+        function migrarPagos(pagos) {
+            for (var i = 0; i < pagos.length; i++) {
+                var pg = pagos[i];
+                if (pg.meses && Array.isArray(pg.meses) && pg.meses.length > 0) continue;
+                if (pg.anio !== undefined && pg.mes !== undefined) {
+                    pg.meses = [{ anio: pg.anio, mes: pg.mes }];
+                    delete pg.anio;
+                    delete pg.mes;
+                }
+            }
+            return pagos;
+        }
+
+        async function obtenerDatos() {
+            try {
+                var resA = await githubLeer('afiliaciones.json');
+                var resP = await githubLeer('recaudos.json');
+                return {
+                    afiliados: resA ? resA.data : [],
+                    pagos: resP ? migrarPagos(resP.data) : []
+                };
+            } catch(e) {
+                return { afiliados: [], pagos: [] };
+            }
+        }
+
+        async function buscar() {
+            var q = document.getElementById('buscarInput').value.trim().toLowerCase();
+            if (!q) { document.getElementById('buscarInput').focus(); return; }
+
+            var datos = await obtenerDatos();
+            var afiliado = null;
+            for (var i = 0; i < datos.afiliados.length; i++) {
+                var a = datos.afiliados[i];
+                if ((a.cedula && a.cedula.toLowerCase() === q) ||
+                    (a.nombres && a.nombres.toLowerCase().indexOf(q) !== -1) ||
+                    (a.cedula && a.cedula.toLowerCase().indexOf(q) !== -1)) {
+                    afiliado = a;
+                    break;
+                }
+            }
+
+            if (!afiliado) {
+                document.getElementById('resultado').classList.remove('visible');
+                document.getElementById('resultado').style.display = 'none';
+                document.getElementById('noResult').style.display = 'block';
+                return;
+            }
+
+            document.getElementById('noResult').style.display = 'none';
+            document.getElementById('resultado').style.display = 'block';
+            document.getElementById('resultado').classList.add('visible');
+
+            mostrarInfo(afiliado);
+            mostrarEstado(datos.pagos, afiliado);
+            mostrarMesesDeuda(datos.pagos, afiliado);
+            mostrarHistorial(datos.pagos, afiliado);
+        }
+
+        function mostrarInfo(a) {
+            var html = '';
+            html += '<div class="info-row"><span class="label">N° Registro</span><span class="value">' + (a.numRegistro || '-') + '</span></div>';
+            html += '<div class="info-row"><span class="label">Cédula</span><span class="value">' + (a.cedula || '-') + '</span></div>';
+            html += '<div class="info-row"><span class="label">Nombres</span><span class="value">' + (a.nombres || '-') + '</span></div>';
+            html += '<div class="info-row"><span class="label">Afiliación</span><span class="value">' + (a.fechaAfiliacion || '-') + '</span></div>';
+            document.getElementById('infoContent').innerHTML = html;
+            document.getElementById('cardInfo').classList.add('visible');
+        }
+
+        function mesesDePago(pago) {
+            var resultado = [];
+            if (pago.meses && Array.isArray(pago.meses)) {
+                pago.meses.forEach(function(m) { resultado.push({ anio: m.anio, mes: m.mes }); });
+            } else if (pago.anio !== undefined && pago.mes !== undefined) {
+                resultado.push({ anio: pago.anio, mes: pago.mes });
+            }
+            return resultado;
+        }
+
+        function mostrarEstado(pagos, afiliado) {
+            document.getElementById('cardEstado').classList.add('visible');
+            var pp = pagos.filter(function(p) { return p.afiliadoId === afiliado.id; });
+
+            var ahora = new Date();
+            var anioAct = ahora.getFullYear();
+            var mesAct = ahora.getMonth() + 1;
+
+            var fechaAf = afiliado.fechaAfiliacion || '';
+            var partes = fechaAf.split('-');
+            var anioIni = partes.length >= 1 ? parseInt(partes[0]) : 2024;
+            var mesIni = partes.length >= 2 ? parseInt(partes[1]) : 1;
+
+            function key(anio, mes) { return anio + '-' + String(mes).padStart(2, '0'); }
+
+            var pagados = {};
+            for (var i = 0; i < pp.length; i++) {
+                var mp = mesesDePago(pp[i]);
+                for (var j = 0; j < mp.length; j++) {
+                    pagados[key(mp[j].anio, mp[j].mes)] = true;
+                }
+            }
+
+            var totalDebe = 0, mesesDeuda = 0;
+            for (var anio = anioIni; anio <= anioAct; anio++) {
+                var d = (anio === anioIni) ? mesIni : 1;
+                var h = (anio === anioAct) ? mesAct : 12;
+                for (var m = d; m <= h; m++) {
+                    if (!pagados[key(anio, m)]) {
+                        totalDebe += VALOR_MENSUAL;
+                        mesesDeuda++;
+                    }
+                }
+            }
+
+            var alDia = mesesDeuda === 0;
+            var html = '';
+            html += '<div class="estado-box ' + (alDia ? 'estado-al-dia' : 'estado-mora') + '">' + (alDia ? '✓ AL DÍA' : '✗ EN MORA') + '</div>';
+            html += '<div class="deuda-info">';
+            html += '<div class="deuda-item"><div class="num ' + (mesesDeuda > 0 ? 'rojo' : 'verde') + '">' + mesesDeuda + '</div><div class="lbl">Meses</div></div>';
+            html += '<div class="deuda-item"><div class="num ' + (totalDebe > 0 ? 'rojo' : 'verde') + '">$' + totalDebe.toLocaleString('es-CO') + '</div><div class="lbl">Total</div></div>';
+            html += '<div class="deuda-item"><div class="num">' + pp.length + '</div><div class="lbl">Pagos</div></div>';
+            html += '</div>';
+            document.getElementById('estadoContent').innerHTML = html;
+        }
+
+        function mostrarMesesDeuda(pagos, afiliado) {
+            document.getElementById('cardMeses').classList.add('visible');
+            var pp = pagos.filter(function(p) { return p.afiliadoId === afiliado.id; });
+
+            var ahora = new Date();
+            var anioAct = ahora.getFullYear();
+            var mesAct = ahora.getMonth() + 1;
+
+            var fechaAf = afiliado.fechaAfiliacion || '';
+            var partes = fechaAf.split('-');
+            var anioIni = partes.length >= 1 ? parseInt(partes[0]) : 2024;
+            var mesIni = partes.length >= 2 ? parseInt(partes[1]) : 1;
+
+            function key(anio, mes) { return anio + '-' + String(mes).padStart(2, '0'); }
+
+            var pagados = {};
+            for (var i = 0; i < pp.length; i++) {
+                var mp = mesesDePago(pp[i]);
+                for (var j = 0; j < mp.length; j++) {
+                    pagados[key(mp[j].anio, mp[j].mes)] = true;
+                }
+            }
+
+            var mesesDeuda = [];
+            for (var anio = anioIni; anio <= anioAct; anio++) {
+                var d = (anio === anioIni) ? mesIni : 1;
+                var h = (anio === anioAct) ? mesAct : 12;
+                for (var m = d; m <= h; m++) {
+                    if (!pagados[key(anio, m)]) {
+                        mesesDeuda.push({ anio: anio, mes: m });
+                    }
+                }
+            }
+
+            if (mesesDeuda.length === 0) {
+                document.getElementById('mesesContent').innerHTML = '<div class="vacio">No tiene meses en deuda ✓</div>';
+                return;
+            }
+
+            mesesDeuda.sort(function(a, b) { return a.anio - b.anio || a.mes - b.mes; });
+            var html = '<ul class="meses-lista">';
+            for (var i = 0; i < mesesDeuda.length; i++) {
+                html += '<li>';
+                html += '<span class="mes-nombre">' + MESES[mesesDeuda[i].mes - 1] + ' ' + mesesDeuda[i].anio + '</span>';
+                html += '<span class="mes-valor">$' + VALOR_MENSUAL.toLocaleString('es-CO') + '</span>';
+                html += '</li>';
+            }
+            html += '</ul>';
+            document.getElementById('mesesContent').innerHTML = html;
+        }
+
+        function mostrarHistorial(pagos, afiliado) {
+            document.getElementById('cardHistorial').classList.add('visible');
+            var pp = pagos.filter(function(p) { return p.afiliadoId === afiliado.id; });
+            pp.sort(function(a, b) { return new Date(b.fechaRegistro) - new Date(a.fechaRegistro); });
+
+            if (pp.length === 0) {
+                document.getElementById('historialContent').innerHTML = '<div class="vacio">No hay pagos registrados</div>';
+                return;
+            }
+
+            var html = '';
+            for (var i = 0; i < pp.length; i++) {
+                var p = pp[i];
+                var mp = mesesDePago(p);
+                var mesesStr = '';
+                for (var j = 0; j < mp.length; j++) {
+                    mesesStr += (j > 0 ? ', ' : '') + MESES[mp[j].mes - 1] + '/' + mp[j].anio;
+                }
+                html += '<div class="pago-item">';
+                html += '<div class="pago-top"><span class="pago-recibo">Recibo #' + (p.recibo || '-') + '</span><span class="pago-valor">$' + (p.valor || 0).toLocaleString('es-CO') + '</span></div>';
+                html += '<div class="pago-meses">' + mesesStr + '</div>';
+                html += '<div class="pago-fecha">' + (p.fecha || '') + '</div>';
+                html += '</div>';
+            }
+            document.getElementById('historialContent').innerHTML = html;
+        }
+
+        document.getElementById('buscarBtn').addEventListener('click', buscar);
+        document.getElementById('buscarInput').addEventListener('keypress', function(e) {
+            if (e.key === 'Enter') buscar();
+        });
+    </script>
+</body>
+</html>

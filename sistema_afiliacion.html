@@ -1,0 +1,319 @@
+<!DOCTYPE html>
+<html lang="es">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>Afiliación - ASEPRIGA</title>
+    <style>
+        * { margin: 0; padding: 0; box-sizing: border-box; font-family: 'Segoe UI', Roboto, sans-serif; }
+        body { background: linear-gradient(145deg, #1a3c6e, #2a5298); min-height: 100vh; display: flex; justify-content: center; padding: 10px; }
+        .app { max-width: 1200px; width: 100%; background: white; border-radius: 28px; padding: 20px; box-shadow: 0 15px 35px rgba(0,0,0,0.15); }
+        .header { text-align: center; margin-bottom: 16px; }
+        .header h1 { font-size: 1.5rem; color: #1a3c6e; margin-bottom: 2px; }
+        .header .fecha { font-size: 0.8rem; font-weight: 700; color: #4a6b8a; margin-bottom: 10px; }
+        .header-actions { display: flex; justify-content: center; gap: 8px; flex-wrap: wrap; }
+        .header-actions { display: flex; gap: 8px; flex-wrap: wrap; }
+        .btn {
+            padding: 7px 16px; border: none; border-radius: 100px; font-weight: 600; font-size: 0.75rem;
+            cursor: pointer; transition: 0.15s; display: inline-flex; align-items: center; gap: 6px; height: 34px;
+        }
+        .btn-primary { background: #1a3c6e; color: white; }
+        .btn-primary:hover { background: #2a5298; }
+        .btn-success { background: #27ae60; color: white; }
+        .btn-success:hover { background: #1e8449; }
+        .btn-danger { background: #e74c3c; color: white; }
+        .btn-warning { background: #f39c12; color: white; }
+        .btn-outline { background: #eef2f7; color: #1a3c6e; border: 1px solid #cbd5e0; }
+        .btn-sm { padding: 4px 10px; font-size: 0.7rem; height: 28px; }
+        .action-bar {
+            background: #f0f4ff; padding: 12px 16px; border-radius: 16px; margin-bottom: 16px;
+            display: flex; gap: 10px; align-items: center; flex-wrap: wrap;
+        }
+        .search-box { flex: 1; min-width: 200px; display: flex; align-items: center; background: white; border: 1px solid #cbd5e0; border-radius: 10px; padding: 0 10px; }
+        .search-box input { flex: 1; padding: 8px 6px; border: none; background: transparent; font-size: 0.85rem; }
+        .search-box input:focus { outline: none; }
+        .total-badge { background: #1a3c6e; color: white; padding: 4px 14px; border-radius: 100px; font-size: 0.8rem; font-weight: 700; }
+        .table-section {
+            background: white; border-radius: 16px; border: 2px solid #d0dff0; overflow: hidden;
+        }
+        .table-responsive { overflow-x: auto; }
+        table { width: 100%; border-collapse: collapse; font-size: 0.8rem; min-width: 700px; }
+        th { background: #1a3c6e; color: white; padding: 12px 8px; text-align: center; font-size: 0.8rem; }
+        td { padding: 8px; border-bottom: 1px solid #e0e6ed; text-align: center; }
+        tr:hover td { background: #f0f4ff; }
+        .file-hidden { display: none; }
+        .modal {
+            display: none; position: fixed; top: 0; left: 0; width: 100%; height: 100%;
+            background: rgba(26,60,110,0.4); backdrop-filter: blur(4px);
+            align-items: center; justify-content: center; z-index: 1000; padding: 20px;
+        }
+        .modal-content {
+            background: white; border-radius: 24px; max-width: 500px; width: 100%; max-height: 80vh; overflow-y: auto;
+            padding: 24px; box-shadow: 0 25px 50px rgba(0,0,0,0.2);
+        }
+        .modal-header { display: flex; justify-content: space-between; align-items: center; margin-bottom: 16px; padding-bottom: 10px; border-bottom: 2px solid #e0e6ed; }
+        .modal-header h3 { font-size: 1rem; color: #1a3c6e; }
+        .close-btn { background: none; border: none; font-size: 1.3rem; cursor: pointer; color: #6a8b6a; }
+        .form-group { margin-bottom: 14px; }
+        label { font-weight: 600; font-size: 0.8rem; display: block; margin-bottom: 4px; color: #1e2f3a; }
+        input { width: 100%; padding: 9px 12px; border: 1px solid #cbd5e0; border-radius: 10px; font-size: 0.85rem; }
+        .modal-footer { display: flex; gap: 10px; justify-content: flex-end; padding-top: 12px; border-top: 1px solid #e0e6ed; }
+        .empty-state { text-align: center; padding: 40px; color: #95a5a6; }
+        @media (max-width: 600px) { .header { flex-direction: column; text-align: center; } }
+    </style>
+</head>
+<body>
+    <div class="app">
+        <div class="header">
+            <h1>ASEPRIGA</h1>
+            <div class="fecha" id="fechaDisplay"></div>
+            <div class="header-actions">
+                <button class="btn btn-success" onclick="abrirModal()">+ Nuevo</button>
+            </div>
+        </div>
+
+        <div class="action-bar">
+            <div class="search-box">
+                <span>🔍</span>
+                <input type="text" id="buscador" placeholder="Buscar por nombre, cédula..." onkeyup="filtrarTabla()">
+            </div>
+            <span class="total-badge" id="totalAfiliados">0</span>
+        </div>
+
+        <div class="table-section">
+            <div class="table-responsive">
+                <table>
+                    <thead>
+                        <tr>
+                            <th style="width:60px">N°</th>
+                            <th style="width:120px">Cédula</th>
+                            <th style="text-align:left">Nombres Completos</th>
+                            <th style="text-align:left">Dirección</th>
+                            <th style="width:120px">Teléfono</th>
+                            <th style="width:120px">Fecha Afiliación</th>
+                            <th style="width:100px">Acciones</th>
+                        </tr>
+                    </thead>
+                    <tbody id="tablaAfiliados"></tbody>
+                </table>
+            </div>
+        </div>
+    </div>
+
+    <!-- MODAL TOKEN GITHUB -->
+    <div id="modalToken" class="modal" style="display:flex;">
+        <div class="modal-content" style="max-width:400px;">
+            <div class="modal-header">
+                <h3>🔑 Token de GitHub</h3>
+            </div>
+            <p style="font-size:0.85rem;color:#555;margin-bottom:14px;">Ingrese el token de acceso personal de GitHub para sincronizar los datos. El token se guardará por 10 días.</p>
+            <div class="form-group">
+                <label>Token de acceso</label>
+                <input type="password" id="tokenInput" placeholder="github_pat_..." autofocus>
+            </div>
+            <div style="display:flex;gap:10px;justify-content:flex-end;padding-top:12px;border-top:1px solid #e0e6ed;">
+                <button class="btn btn-primary" onclick="validarToken()">Ingresar</button>
+            </div>
+            <div id="tokenError" style="color:#e74c3c;font-size:0.8rem;margin-top:10px;display:none;"></div>
+        </div>
+    </div>
+
+    <div id="modalAfiliado" class="modal">
+        <div class="modal-content">
+            <div class="modal-header">
+                <h3 id="modalTitle">Nuevo Afiliado</h3>
+                <button class="close-btn" onclick="cerrarModal()">&times;</button>
+            </div>
+            <input type="hidden" id="editId">
+            <div class="form-group"><label>Cédula *</label><input type="text" id="cedula" placeholder="Número de cédula"></div>
+            <div class="form-group"><label>Nombres Completos *</label><input type="text" id="nombres" placeholder="Nombres y apellidos"></div>
+            <div class="form-group"><label>Dirección</label><input type="text" id="direccion" placeholder="Dirección de residencia"></div>
+            <div class="form-group"><label>Teléfono</label><input type="text" id="telefono" placeholder="Número de teléfono"></div>
+            <div class="form-group"><label>Fecha de Afiliación *</label><input type="date" id="fechaAfiliacion"></div>
+            <div class="modal-footer">
+                <button class="btn btn-outline" onclick="cerrarModal()">Cancelar</button>
+                <button class="btn btn-primary" onclick="guardarAfiliado()">Guardar</button>
+            </div>
+        </div>
+    </div>
+
+    <script>
+        var usuario = sessionStorage.getItem('usuario_activo');
+        if (!usuario || usuario !== 'Secretaria') { window.location.href = 'index.html'; }
+
+        let afiliados = [];
+        let shaAfiliaciones = null;
+
+        const GITHUB_OWNER = 'aseprigapuertogaitan-tech';
+        const GITHUB_REPO = 'asepriga';
+        const GITHUB_BRANCH = 'main';
+        var GITHUB_TOKEN = '';
+        const TOKEN_KEY = 'github_token_secretaria';
+
+        function base64Encode(str) { return btoa(unescape(encodeURIComponent(str))); }
+        function base64Decode(str) { return decodeURIComponent(escape(atob(str))); }
+
+        function tokenGuardado() {
+            try {
+                var data = JSON.parse(localStorage.getItem(TOKEN_KEY));
+                if (data && data.token && Date.now() < data.expires) {
+                    GITHUB_TOKEN = data.token;
+                    return true;
+                }
+            } catch(e) {}
+            return false;
+        }
+
+        function guardarToken(token) {
+            localStorage.setItem(TOKEN_KEY, JSON.stringify({
+                token: token,
+                expires: Date.now() + 10 * 24 * 60 * 60 * 1000
+            }));
+            GITHUB_TOKEN = token;
+        }
+
+        function validarToken() {
+            var t = document.getElementById('tokenInput').value.trim();
+            if (!t) { document.getElementById('tokenError').textContent = 'Ingrese un token válido'; document.getElementById('tokenError').style.display = 'block'; return; }
+            document.getElementById('tokenError').style.display = 'none';
+            guardarToken(t);
+            document.getElementById('modalToken').style.display = 'none';
+            cargarDatos();
+        }
+
+        document.getElementById('tokenInput').addEventListener('keypress', function(e) {
+            if (e.key === 'Enter') validarToken();
+        });
+
+        function base64Encode(str) { return btoa(unescape(encodeURIComponent(str))); }
+        function base64Decode(str) { return decodeURIComponent(escape(atob(str))); }
+
+        async function githubLeer(archivo) {
+            var r = await fetch('https://api.github.com/repos/' + GITHUB_OWNER + '/' + GITHUB_REPO + '/contents/' + archivo, {
+                headers: { 'Authorization': 'Bearer ' + GITHUB_TOKEN, 'Accept': 'application/vnd.github.v3+json' }
+            });
+            if (r.status === 404) return null;
+            if (!r.ok) throw new Error('Error al leer (' + r.status + ')');
+            var data = await r.json();
+            return { data: JSON.parse(base64Decode(data.content)), sha: data.sha };
+        }
+
+        async function githubGuardar(archivo, contenido, sha) {
+            var body = {
+                message: 'Actualización ' + archivo + ' - ' + new Date().toLocaleString('es-CO'),
+                content: base64Encode(JSON.stringify(contenido, null, 2)),
+                branch: GITHUB_BRANCH
+            };
+            if (sha) body.sha = sha;
+            var r = await fetch('https://api.github.com/repos/' + GITHUB_OWNER + '/' + GITHUB_REPO + '/contents/' + archivo, {
+                method: 'PUT',
+                headers: { 'Authorization': 'Bearer ' + GITHUB_TOKEN, 'Content-Type': 'application/json', 'Accept': 'application/vnd.github.v3+json' },
+                body: JSON.stringify(body)
+            });
+            if (!r.ok) throw new Error('Error al guardar (' + r.status + ')');
+            var res = await r.json();
+            return res.content.sha;
+        }
+
+        function actualizarFecha() {
+            const d = new Date();
+            const opciones = { weekday: 'long', year: 'numeric', month: 'long', day: 'numeric' };
+            document.getElementById('fechaDisplay').textContent = d.toLocaleDateString('es-ES', opciones).replace(/^\w/, c => c.toUpperCase());
+        }
+        actualizarFecha();
+
+        async function cargarDatos() {
+            try {
+                var resultado = await githubLeer('afiliaciones.json');
+                if (resultado) {
+                    afiliados = resultado.data;
+                    shaAfiliaciones = resultado.sha;
+                } else {
+                    afiliados = [];
+                    shaAfiliaciones = null;
+                }
+            } catch(e) {
+                alert('Error al cargar datos desde GitHub: ' + e.message);
+                afiliados = [];
+            }
+            renderizarTabla();
+        }
+
+        if (tokenGuardado()) { cargarDatos(); }
+
+        async function guardarDatos() {
+            try {
+                shaAfiliaciones = await githubGuardar('afiliaciones.json', afiliados, shaAfiliaciones);
+            } catch(e) {
+                alert('Error al guardar en GitHub: ' + e.message);
+            }
+            renderizarTabla();
+        }
+
+        function renderizarTabla() {
+            const tbody = document.getElementById('tablaAfiliados');
+            const filtro = (document.getElementById('buscador').value || '').toLowerCase();
+            const filtrados = afiliados.filter(a =>
+                (a.nombres || '').toLowerCase().includes(filtro) ||
+                (a.cedula || '').includes(filtro)
+            );
+            if (filtrados.length === 0) {
+                tbody.innerHTML = '<tr><td colspan="7"><div class="empty-state">No hay afiliados registrados</div></td></tr>';
+            } else {
+                tbody.innerHTML = filtrados.map(a => `<tr>
+                    <td style="font-weight:bold;color:#1a3c6e;">${a.numRegistro}</td>
+                    <td>${a.cedula}</td>
+                    <td style="text-align:left;font-weight:500;">${a.nombres}</td>
+                    <td style="text-align:left;">${a.direccion || '-'}</td>
+                    <td>${a.telefono || '-'}</td>
+                    <td>${a.fechaAfiliacion || '-'}</td>
+                    <td>
+                        <button class="btn btn-sm btn-primary" onclick="editarAfiliado('${a.id}')">✏️</button>
+                        <button class="btn btn-sm btn-danger" onclick="eliminarAfiliado('${a.id}')">🗑</button>
+                    </td>
+                </tr>`).join('');
+            }
+            document.getElementById('totalAfiliados').innerText = `${afiliados.length} afiliado${afiliados.length !== 1 ? 's' : ''}`;
+        }
+
+        function filtrarTabla() { renderizarTabla(); }
+
+        function abrirModal(afiliado) {
+            document.getElementById('modalTitle').innerText = afiliado ? 'Editar Afiliado' : 'Nuevo Afiliado';
+            document.getElementById('editId').value = afiliado ? afiliado.id : '';
+            document.getElementById('cedula').value = afiliado ? afiliado.cedula : '';
+            document.getElementById('nombres').value = afiliado ? afiliado.nombres : '';
+            document.getElementById('direccion').value = afiliado ? afiliado.direccion : '';
+            document.getElementById('telefono').value = afiliado ? afiliado.telefono : '';
+            document.getElementById('fechaAfiliacion').value = afiliado ? afiliado.fechaAfiliacion : new Date().toISOString().split('T')[0];
+            document.getElementById('modalAfiliado').style.display = 'flex';
+        }
+
+        function cerrarModal() { document.getElementById('modalAfiliado').style.display = 'none'; }
+
+        function guardarAfiliado() {
+            const id = document.getElementById('editId').value;
+            const cedula = document.getElementById('cedula').value.trim();
+            const nombres = document.getElementById('nombres').value.trim();
+            const direccion = document.getElementById('direccion').value.trim();
+            const telefono = document.getElementById('telefono').value.trim();
+            const fechaAfiliacion = document.getElementById('fechaAfiliacion').value;
+            if (!cedula || !nombres) { alert('Cédula y Nombres son obligatorios'); return; }
+            if (id) {
+                const idx = afiliados.findIndex(a => a.id === id);
+                if (idx !== -1) { Object.assign(afiliados[idx], { cedula, nombres, direccion, telefono, fechaAfiliacion }); }
+            } else {
+                const maxReg = afiliados.reduce((m, a) => Math.max(m, a.numRegistro || 0), 0);
+                afiliados.push({ id: Date.now().toString(), numRegistro: maxReg + 1, cedula, nombres, direccion, telefono, fechaAfiliacion, fechaRegistro: new Date().toISOString() });
+            }
+            guardarDatos(); cerrarModal();
+        }
+
+        function editarAfiliado(id) { const a = afiliados.find(a => a.id === id); if (a) abrirModal(a); }
+        function eliminarAfiliado(id) { if (!confirm('¿Eliminar este afiliado?')) return; afiliados = afiliados.filter(a => a.id !== id); guardarDatos(); }
+
+        document.getElementById('modalAfiliado').addEventListener('click', function(e) { if (e.target === this) cerrarModal(); });
+        document.addEventListener('keydown', function(e) { if (e.key === 'Escape') cerrarModal(); });
+    </script>
+</body>
+</html>

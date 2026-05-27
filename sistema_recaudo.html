@@ -1,0 +1,873 @@
+<!DOCTYPE html>
+<html lang="es">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>Sistema de Recaudo - ASEPRIGA</title>
+    <style>
+        * { margin: 0; padding: 0; box-sizing: border-box; font-family: 'Segoe UI', Roboto, sans-serif; }
+        body { background: linear-gradient(145deg, #1e6e3e, #2d8f56); min-height: 100vh; display: flex; justify-content: center; padding: 10px; }
+        .app { max-width: 1400px; width: 100%; background: white; border-radius: 28px; padding: 12px; box-shadow: 0 15px 35px rgba(0,0,0,0.15); }
+        .header { text-align: center; margin-bottom: 8px; }
+        .header h1 { font-size: 1.5rem; color: #1e6e3e; margin-bottom: 2px; }
+        .header .fecha { font-size: 0.8rem; font-weight: 700; color: #4a7a5a; margin-bottom: 8px; }
+        .header-actions { display: flex; gap: 6px; flex-wrap: wrap; }
+        .btn {
+            padding: 7px 16px; border: none; border-radius: 100px; font-weight: 600; font-size: 0.8rem;
+            cursor: pointer; transition: 0.15s; display: inline-flex; align-items: center; gap: 5px; height: 36px;
+        }
+        .btn-primary { background: #1a3c6e; color: white; }
+        .btn-success { background: #27ae60; color: white; }
+        .btn-danger { background: #e74c3c; color: white; }
+        .btn-warning { background: #f39c12; color: white; }
+        .btn-outline { background: #eef2f7; color: #1e6e3e; border: 1px solid #cbd5e0; }
+        .btn-sm { padding: 4px 10px; font-size: 0.72rem; height: 30px; }
+        .btn-block { width: 100%; }
+
+        .stats-grid { display: grid; grid-template-columns: repeat(4, 1fr); gap: 6px; margin-bottom: 10px; }
+        .stat-card { background: white; padding: 10px 6px; border-radius: 10px; border: 1px solid #b8e0b8; border-top: 3px solid #5ab05a; text-align: center; cursor: pointer; }
+        .stat-label { font-size: 0.7rem; color: #4a6b4a; text-transform: uppercase; font-weight: 700; }
+        .stat-value { font-size: 1.3rem; font-weight: 700; color: #1a3a2a; }
+        .stat-value.verde { color: #27ae60; }
+        .stat-value.rojo { color: #e74c3c; }
+        .stat-value.azul { color: #1a3c6e; }
+
+        .action-bar {
+            background: #f0f8f0; padding: 10px 14px; border-radius: 14px; margin-bottom: 10px;
+            display: flex; gap: 8px; align-items: center; flex-wrap: wrap;
+        }
+        .search-box { flex: 1; min-width: 180px; display: flex; align-items: center; background: white; border: 1px solid #cbd5e0; border-radius: 10px; padding: 0 10px; }
+        .search-box input { flex: 1; padding: 8px 6px; border: none; background: transparent; font-size: 0.9rem; }
+        .search-box input:focus { outline: none; }
+        .badge-sgte-recibo { background: #ffd966; color: #1e6e3e; padding: 4px 12px; border-radius: 100px; font-size: 0.75rem; font-weight: 700; display: flex; align-items: center; gap: 4px; height: 32px; }
+        .badge-sgte-recibo span { background: #1e6e3e; color: white; padding: 2px 8px; border-radius: 100px; font-size: 0.8rem; }
+
+        .table-section { border-radius: 14px; border: 2px solid #c8e4c8; overflow: hidden; margin-bottom: 10px; }
+        .table-header { background: #e8f4e8; padding: 6px 10px; display: flex; justify-content: space-between; align-items: center; flex-wrap: wrap; gap: 6px; }
+        .table-header .title { font-weight: 700; color: #1e6e3e; font-size: 0.85rem; }
+        .leyenda { display: flex; gap: 10px; font-size: 0.65rem; font-weight: 600; align-items: center; flex-wrap: wrap; }
+        .leyenda span { display: flex; align-items: center; gap: 3px; }
+        .table-responsive { overflow-x: auto; }
+        table { width: 100%; border-collapse: collapse; font-size: 0.78rem; min-width: 900px; }
+        th { background: #1e6e3e; color: white; padding: 10px 6px; text-align: center; font-size: 0.75rem; }
+        td { padding: 8px 6px; border-bottom: 1px solid #d8ecd8; text-align: center; vertical-align: middle; }
+        tr:hover td { background: #f0faf0; }
+        .cell-recibo { font-weight: 700; color: #1e6e3e; background: #e8f4e8; padding: 2px 8px; border-radius: 100px; display: inline-block; font-size: 0.75rem; }
+
+        .month-box { width: 24px; height: 24px; border-radius: 4px; display: inline-flex; align-items: center; justify-content: center; margin: 0 auto; cursor: pointer; transition: 0.1s; }
+        .month-box.debe { background: #fff0f0; border: 2px solid #e74c3c; }
+        .month-box.debe:hover { transform: scale(1.15); }
+        .month-box.pagado { background: #d4edda; border: 2px solid #5ab05a; }
+        .month-box.pagado::after { content: "✓"; color: #27ae60; font-weight: 700; font-size: 12px; }
+        .month-box.futuro { background: #f0f8f0; border: 2px solid #c8e4c8; opacity: 0.5; }
+        .month-box.no-visible { background: transparent; border: none; }
+
+        .modal {
+            display: none; position: fixed; top: 0; left: 0; width: 100%; height: 100%;
+            background: rgba(30,110,62,0.4); backdrop-filter: blur(4px);
+            align-items: center; justify-content: center; z-index: 1000; padding: 20px;
+        }
+        .modal-content {
+            background: white; border-radius: 24px; max-width: 600px; width: 100%; max-height: 80vh;
+            overflow-y: auto; padding: 20px; box-shadow: 0 25px 50px rgba(0,0,0,0.2);
+        }
+        .modal-content.lg { max-width: 800px; }
+        .modal-header { display: flex; justify-content: space-between; align-items: center; margin-bottom: 12px; padding-bottom: 10px; border-bottom: 2px solid #c8e4c8; position: sticky; top: 0; background: white; z-index: 5; }
+        .modal-header h3 { font-size: 1rem; color: #1e6e3e; }
+        .close-btn { background: none; border: none; font-size: 1.3rem; cursor: pointer; color: #6a8b6a; }
+        .form-group { margin-bottom: 12px; }
+        label { font-weight: 600; font-size: 0.78rem; display: block; margin-bottom: 4px; color: #1e2f3a; }
+        input, select { width: 100%; padding: 8px 12px; border: 1px solid #cbd5e0; border-radius: 10px; font-size: 0.82rem; }
+        .file-hidden { display: none; }
+
+        .receipt-info { background: #f0f8f0; padding: 12px; border-radius: 12px; margin-bottom: 12px; border-left: 5px solid #1e6e3e; }
+        .months-checklist { margin-bottom: 12px; padding: 10px; background: #f8fff8; border-radius: 12px; border: 2px solid #c8e4c8; max-height: 200px; overflow-y: auto; }
+        .months-checklist label { margin-bottom: 8px; display: block; }
+        .month-check-item { display: flex; align-items: center; gap: 8px; padding: 6px 8px; margin-bottom: 4px; background: white; border-radius: 8px; border: 1px solid #e0e0e0; cursor: pointer; }
+        .month-check-item:hover { background: #f0faf0; }
+        .month-check-item input { width: 16px; height: 16px; cursor: pointer; margin: 0; }
+        .month-check-item .nombre-mes { flex: 1; font-weight: 600; color: #1e6e3e; }
+        .month-check-item .valor-mes { font-weight: 700; color: #e74c3c; }
+        .total-amount { background: #1e6e3e; color: white; padding: 10px; border-radius: 10px; text-align: center; font-weight: 700; font-size: 1rem; margin-bottom: 12px; }
+
+        .pagination { display: flex; justify-content: center; align-items: center; padding: 8px; gap: 8px; background: #e8f4e8; flex-wrap: wrap; }
+        .pagination button { min-width: 28px; height: 28px; border-radius: 6px; border: 1px solid #c8e4c8; background: white; font-size: 0.7rem; font-weight: 600; cursor: pointer; }
+        .pagination button.active { background: #1e6e3e; color: white; border-color: #1e6e3e; }
+        .pagination button:hover:not(.active) { background: #d8ecd8; }
+
+        .empty-state { text-align: center; padding: 30px; color: #95a5a6; }
+        .badge-deuda { font-weight: 700; padding: 2px 8px; border-radius: 100px; font-size: 0.65rem; }
+        .badge-al-dia { background: #d4edda; color: #155724; }
+        .badge-debe { background: #f8d7da; color: #721c24; }
+
+        @media (max-width: 700px) {
+            .stats-grid { grid-template-columns: repeat(2, 1fr); }
+            .header { flex-direction: column; text-align: center; }
+        }
+    </style>
+    <script src="https://cdn.jsdelivr.net/npm/html2canvas@1.4.1/dist/html2canvas.min.js"></script>
+</head>
+<body>
+    <div class="app">
+        <div class="header">
+            <h1>ASEPRIGA</h1>
+            <div class="fecha" id="fechaDisplay"></div>
+            <div style="display:flex;justify-content:center;gap:6px;flex-wrap:wrap;">
+                <button class="btn btn-success" onclick="location.href='sistema_afiliacion.html'">👥 Afiliados</button>
+                
+            </div>
+        </div>
+
+        <div class="stats-grid">
+            <div class="stat-card"><div class="stat-label">Afiliados</div><div class="stat-value azul" id="totalAfiliados">0</div></div>
+            <div class="stat-card"><div class="stat-label">Al Día</div><div class="stat-value verde" id="usuariosAlDia">0</div></div>
+            <div class="stat-card"><div class="stat-label">En Deuda</div><div class="stat-value rojo" id="usuariosDeuda">0</div></div>
+            <div class="stat-card"><div class="stat-label">Total Recaudado</div><div class="stat-value verde" id="totalRecaudado">$0</div></div>
+        </div>
+
+        <div class="action-bar">
+            <div class="search-box">
+                <span>🔍</span>
+                <input type="text" id="buscador" placeholder="Buscar por cédula o nombre..." onkeyup="buscarAfiliado()">
+            </div>
+            <button class="btn btn-primary" onclick="mostrarTodos()">📋 Todos</button>
+            <div class="badge-sgte-recibo">Sgte. Recibo <span id="nextRecibo">00001</span></div>
+        </div>
+
+        <div class="table-section">
+            <div class="table-header">
+                <span class="title">📋 Control de Pagos Mensuales - $10.000/mes</span>
+                <div class="leyenda">
+                    <span><span style="color:#e74c3c;font-size:16px;">●</span> Debe</span>
+                    <span><span style="color:#27ae60;font-size:16px;">●</span> Pagado</span>
+                    <span><span style="color:#c8e4c8;font-size:16px;">●</span> Futuro</span>
+                </div>
+            </div>
+            <div class="table-responsive">
+                <table>
+                    <thead>
+                        <tr>
+                            <th style="width:80px">Cédula</th>
+                            <th style="text-align:left;min-width:160px;">Nombre</th>
+                            <th style="width:70px">Afiliación</th>
+                            <th style="width:80px">Deuda</th>
+                            <th style="width:55px">Detalle</th>
+                            <th style="width:70px">N° Recibo</th>
+                            <th style="width:28px">Ene</th><th style="width:28px">Feb</th><th style="width:28px">Mar</th>
+                            <th style="width:28px">Abr</th><th style="width:28px">May</th><th style="width:28px">Jun</th>
+                            <th style="width:28px">Jul</th><th style="width:28px">Ago</th><th style="width:28px">Sep</th>
+                            <th style="width:28px">Oct</th><th style="width:28px">Nov</th><th style="width:28px">Dic</th>
+                        </tr>
+                    </thead>
+                    <tbody id="tablaRecaudo"></tbody>
+                </table>
+            </div>
+            <div class="pagination" id="paginacion">
+                <button id="prevPage">‹</button>
+                <span id="pageInfo">Página 1 de 1</span>
+                <button id="nextPage">›</button>
+                <span style="font-size:0.65rem;color:#4a6b4a;" id="totalMostrados"></span>
+            </div>
+        </div>
+    </div>
+
+    <!-- MODAL TOKEN GITHUB -->
+    <div id="modalToken" class="modal" style="display:flex;">
+        <div class="modal-content" style="max-width:400px;">
+            <div class="modal-header">
+                <h3>🔑 Token de GitHub</h3>
+            </div>
+            <p style="font-size:0.85rem;color:#555;margin-bottom:14px;">Ingrese el token de acceso personal de GitHub para sincronizar los datos. El token se guardará por 10 días.</p>
+            <div class="form-group">
+                <label>Token de acceso</label>
+                <input type="password" id="tokenInput" placeholder="github_pat_..." autofocus>
+            </div>
+            <div style="display:flex;gap:10px;justify-content:flex-end;padding-top:12px;border-top:1px solid #c8e4c8;">
+                <button class="btn btn-primary" onclick="validarToken()">Ingresar</button>
+            </div>
+            <div id="tokenError" style="color:#e74c3c;font-size:0.8rem;margin-top:10px;display:none;"></div>
+        </div>
+    </div>
+
+    <!-- MODAL RECIBO DE PAGO -->
+    <div id="modalRecibo" class="modal">
+        <div class="modal-content">
+            <div class="modal-header">
+                <h3>🧾 Registrar Pago</h3>
+                <button class="close-btn" onclick="cerrarModalRecibo()">&times;</button>
+            </div>
+            <div id="reciboInfo" class="receipt-info"></div>
+
+            <div class="months-checklist" id="monthsContainer">
+                <label>📆 Seleccione los meses a pagar:</label>
+                <div id="monthsChecklist"></div>
+            </div>
+
+            <div class="form-group">
+                <label>NÚMERO DE RECIBO</label>
+                <input type="text" id="reciboNumero" placeholder="00001">
+            </div>
+            <div class="form-group">
+                <label>📅 FECHA DE PAGO</label>
+                <input type="date" id="fechaPago">
+            </div>
+            <div class="total-amount" id="totalPago">Total: $0</div>
+            <div style="display:flex;gap:8px;justify-content:flex-end;">
+                <button class="btn btn-outline" onclick="cerrarModalRecibo()">Cancelar</button>
+                <button class="btn btn-success" onclick="guardarPago()">💾 Guardar Pago</button>
+            </div>
+        </div>
+    </div>
+
+    <!-- MODAL HISTORIAL DE PAGOS -->
+    <div id="modalHistorial" class="modal">
+        <div class="modal-content lg">
+            <div class="modal-header">
+                <h3 id="historialTitle">Historial de Pagos</h3>
+                <div style="display:flex;gap:4px;">
+                    <button class="btn btn-success btn-sm" id="btnPagarHistorial" style="display:none;">💰 Pagar Deuda</button>
+                    <button class="close-btn" onclick="cerrarModalHistorial()">&times;</button>
+                </div>
+            </div>
+            <div id="historialContent"></div>
+        </div>
+    </div>
+
+    <!-- MODAL RECIBO GENERADO (DESPUÉS DEL PAGO) -->
+    <div id="modalReciboGenerado" class="modal">
+        <div class="modal-content" style="max-width:420px;">
+            <div class="modal-header">
+                <h3>🧾 Recibo de Pago</h3>
+                <button class="close-btn" onclick="document.getElementById('modalReciboGenerado').style.display='none'">&times;</button>
+            </div>
+            <div id="reciboGeneradoContenido" style="padding:16px;text-align:center;">
+                <div id="reciboImprimible" style="background:#fff;border:2px solid #1e6e3e;border-radius:16px;padding:20px;margin-bottom:16px;text-align:center;">
+                    <h2 style="color:#1e6e3e;margin-bottom:4px;">ASEPRIGA</h2>
+                    <div style="font-size:0.7rem;color:#4a7a5a;font-weight:600;margin-bottom:12px;" id="reciboFechaGenerado"></div>
+                    <div style="border-top:2px dashed #1e6e3e;border-bottom:2px dashed #1e6e3e;padding:12px 0;margin:8px 0;">
+                        <div style="font-size:0.7rem;color:#666;">RECIBO N°</div>
+                        <div style="font-size:1.5rem;font-weight:700;color:#1e6e3e;" id="reciboNumGenerado"></div>
+                    </div>
+                    <div style="text-align:left;padding:8px 0;font-size:0.82rem;">
+                        <div style="display:flex;justify-content:space-between;padding:3px 0;"><strong>Afiliado:</strong> <span id="reciboAfiliado"></span></div>
+                        <div style="display:flex;justify-content:space-between;padding:3px 0;"><strong>Cédula:</strong> <span id="reciboCedula"></span></div>
+                        <div style="display:flex;justify-content:space-between;padding:3px 0;"><strong>Concepto:</strong> <span id="reciboConcepto"></span></div>
+                        <div style="display:flex;justify-content:space-between;padding:3px 0;"><strong>Valor:</strong> <span id="reciboValor" style="font-weight:700;color:#27ae60;"></span></div>
+                        <div style="display:flex;justify-content:space-between;padding:3px 0;"><strong>Fecha pago:</strong> <span id="reciboFechaPago"></span></div>
+                    </div>
+                    <div style="border-top:2px dashed #1e6e3e;padding-top:10px;margin-top:8px;">
+                        <span style="background:#1e6e3e;color:white;padding:4px 20px;border-radius:100px;font-size:0.7rem;font-weight:700;">PAGADO</span>
+                    </div>
+                </div>
+            </div>
+            <div style="display:flex;gap:8px;justify-content:center;flex-wrap:wrap;">
+                <button class="btn btn-success" onclick="enviarWhatsApp()">📤 WhatsApp</button>
+                <button class="btn btn-primary" onclick="descargarReciboPNG()">🖼️ PNG</button>
+                <button class="btn btn-warning" onclick="imprimirRecibo()">🖨️ Imprimir</button>
+                <button class="btn btn-outline" onclick="document.getElementById('modalReciboGenerado').style.display='none'">Cerrar</button>
+            </div>
+        </div>
+    </div>
+
+    <script>
+        var usuario = sessionStorage.getItem('usuario_activo');
+        if (!usuario || usuario !== 'Tesorera') { window.location.href = 'index.html'; }
+
+        const CUOTA = 10000;
+        const MESES = ['Enero','Febrero','Marzo','Abril','Mayo','Junio','Julio','Agosto','Septiembre','Octubre','Noviembre','Diciembre'];
+        const MESES_CORTOS = ['Ene','Feb','Mar','Abr','May','Jun','Jul','Ago','Sep','Oct','Nov','Dic'];
+        let afiliados = [], pagos = [];
+        let page = 1, pageSize = 8, filtroActual = '';
+        let pagoPendiente = null;
+        let shaRecaudos = null;
+
+        const GITHUB_OWNER = 'aseprigapuertogaitan-tech';
+        const GITHUB_REPO = 'asepriga';
+        const GITHUB_BRANCH = 'main';
+        var GITHUB_TOKEN = '';
+        const TOKEN_KEY = 'github_token_tesorera';
+
+        function base64Encode(str) { return btoa(unescape(encodeURIComponent(str))); }
+        function base64Decode(str) { return decodeURIComponent(escape(atob(str))); }
+
+        function tokenGuardado() {
+            try {
+                var data = JSON.parse(localStorage.getItem(TOKEN_KEY));
+                if (data && data.token && Date.now() < data.expires) {
+                    GITHUB_TOKEN = data.token;
+                    return true;
+                }
+            } catch(e) {}
+            return false;
+        }
+
+        function guardarToken(token) {
+            localStorage.setItem(TOKEN_KEY, JSON.stringify({
+                token: token,
+                expires: Date.now() + 10 * 24 * 60 * 60 * 1000
+            }));
+            GITHUB_TOKEN = token;
+        }
+
+        function validarToken() {
+            var t = document.getElementById('tokenInput').value.trim();
+            if (!t) { document.getElementById('tokenError').textContent = 'Ingrese un token válido'; document.getElementById('tokenError').style.display = 'block'; return; }
+            document.getElementById('tokenError').style.display = 'none';
+            guardarToken(t);
+            document.getElementById('modalToken').style.display = 'none';
+            cargarDatos();
+        }
+
+        document.getElementById('tokenInput').addEventListener('keypress', function(e) {
+            if (e.key === 'Enter') validarToken();
+        });
+
+        async function githubLeer(archivo) {
+            var r = await fetch('https://api.github.com/repos/' + GITHUB_OWNER + '/' + GITHUB_REPO + '/contents/' + archivo, {
+                headers: { 'Authorization': 'Bearer ' + GITHUB_TOKEN, 'Accept': 'application/vnd.github.v3+json' }
+            });
+            if (r.status === 404) return null;
+            if (!r.ok) throw new Error('Error al leer (' + r.status + ')');
+            var data = await r.json();
+            return { data: JSON.parse(base64Decode(data.content)), sha: data.sha };
+        }
+
+        async function githubGuardar(archivo, contenido, sha) {
+            var body = {
+                message: 'Actualización ' + archivo + ' - ' + new Date().toLocaleString('es-CO'),
+                content: base64Encode(JSON.stringify(contenido, null, 2)),
+                branch: GITHUB_BRANCH
+            };
+            if (sha) body.sha = sha;
+            var r = await fetch('https://api.github.com/repos/' + GITHUB_OWNER + '/' + GITHUB_REPO + '/contents/' + archivo, {
+                method: 'PUT',
+                headers: { 'Authorization': 'Bearer ' + GITHUB_TOKEN, 'Content-Type': 'application/json', 'Accept': 'application/vnd.github.v3+json' },
+                body: JSON.stringify(body)
+            });
+            if (!r.ok) throw new Error('Error al guardar (' + r.status + ')');
+            var res = await r.json();
+            return res.content.sha;
+        }
+
+        function actualizarFecha() {
+            const d = new Date();
+            const opciones = { weekday: 'long', year: 'numeric', month: 'long', day: 'numeric' };
+            document.getElementById('fechaDisplay').textContent = d.toLocaleDateString('es-ES', opciones).replace(/^\w/, c => c.toUpperCase());
+        }
+        actualizarFecha();
+
+        async function cargarDatos() {
+            try {
+                var resAfiliados = await githubLeer('afiliaciones.json');
+                if (resAfiliados) {
+                    afiliados = resAfiliados.data;
+                } else {
+                    afiliados = [];
+                }
+                var resRecaudos = await githubLeer('recaudos.json');
+                if (resRecaudos) {
+                    pagos = resRecaudos.data;
+                    shaRecaudos = resRecaudos.sha;
+                } else {
+                    pagos = [];
+                    shaRecaudos = null;
+                }
+            } catch(e) {
+                alert('Error al cargar datos desde GitHub: ' + e.message);
+                afiliados = [];
+                pagos = [];
+            }
+            migrarPagos();
+            actualizarRecibo();
+            renderizar();
+        }
+
+        if (tokenGuardado()) { cargarDatos(); }
+        async function migrarPagos() {
+            var cambios = false;
+            for (var i = 0; i < pagos.length; i++) {
+                var p = pagos[i];
+                if (p.meses && Array.isArray(p.meses) && p.meses.length > 0) continue;
+                if (p.anio !== undefined && p.mes !== undefined) {
+                    p.meses = [{ anio: p.anio, mes: p.mes }];
+                    delete p.anio;
+                    delete p.mes;
+                    cambios = true;
+                }
+            }
+            if (cambios) await guardarPagos();
+        }
+
+        async function guardarPagos() {
+            try {
+                shaRecaudos = await githubGuardar('recaudos.json', pagos, shaRecaudos);
+            } catch(e) {
+                alert('Error al guardar en GitHub: ' + e.message);
+            }
+            actualizarRecibo();
+        }
+
+        function getPagosAfiliado(id) { return pagos.filter(p => p.afiliadoId === id); }
+
+        function getMesesDesde(fechaAfiliacion) {
+            if (!fechaAfiliacion) return [];
+            const inicio = new Date(fechaAfiliacion + 'T00:00:00');
+            const hoy = new Date(); hoy.setHours(0,0,0,0);
+            if (inicio > hoy) return [];
+            const meses = [];
+            let c = new Date(inicio.getFullYear(), inicio.getMonth(), 1);
+            const fin = new Date(hoy.getFullYear(), hoy.getMonth(), 1);
+            while (c <= fin) { meses.push(`${c.getFullYear()}-${String(c.getMonth()+1).padStart(2,'0')}`); c.setMonth(c.getMonth()+1); }
+            return meses;
+        }
+
+        function mesesPagadosSet(afiliadoId) {
+            var set = new Set();
+            pagos.filter(function(p) { return p.afiliadoId === afiliadoId; }).forEach(function(p) {
+                if (p.meses && Array.isArray(p.meses)) {
+                    p.meses.forEach(function(m) {
+                        set.add(m.anio + '-' + String(m.mes).padStart(2,'0'));
+                    });
+                } else if (p.anio && p.mes) {
+                    set.add(p.anio + '-' + String(p.mes).padStart(2,'0'));
+                }
+            });
+            return set;
+        }
+
+        function getEstadoMes(afiliadoId, fechaAf, año, mes) {
+            if (!fechaAf) return 'no-visible';
+            const af = new Date(fechaAf + 'T00:00:00');
+            if (año < af.getFullYear() || (año === af.getFullYear() && mes < af.getMonth())) return 'no-visible';
+            const key = `${año}-${String(mes+1).padStart(2,'0')}`;
+            if (mesesPagadosSet(afiliadoId).has(key)) return 'pagado';
+            const hoy = new Date();
+            if (año > hoy.getFullYear() || (año === hoy.getFullYear() && mes > hoy.getMonth())) return 'futuro';
+            return 'debe';
+        }
+
+        function getMesesDeuda(afiliadoId, fechaAf) {
+            const todos = getMesesDesde(fechaAf);
+            const pagados = mesesPagadosSet(afiliadoId);
+            return todos.filter(m => !pagados.has(m));
+        }
+
+        function calcularDeuda(afiliado) {
+            return getMesesDeuda(afiliado.id, afiliado.fechaAfiliacion).length * CUOTA;
+        }
+
+        function getUltimoRecibo(afiliadoId) {
+            const afPagos = pagos.filter(p => p.afiliadoId === afiliadoId);
+            if (!afPagos.length) return '—';
+            return afPagos.sort((a,b) => new Date(b.fechaRegistro) - new Date(a.fechaRegistro))[0].recibo || '—';
+        }
+
+        function actualizarRecibo() {
+            let max = 0;
+            pagos.forEach(p => { const n = parseInt(p.recibo); if (n > max) max = n; });
+            document.getElementById('nextRecibo').textContent = String(max+1).padStart(5,'0');
+        }
+
+        function getAfiliadosFiltrados() {
+            const f = filtroActual.trim().toLowerCase();
+            if (!f) return [...afiliados];
+            return afiliados.filter(a =>
+                a.cedula.toLowerCase().includes(f) || a.nombres.toLowerCase().includes(f)
+            );
+        }
+
+        function mostrarTodos() {
+            document.getElementById('buscador').value = '';
+            filtroActual = '';
+            page = 1;
+            renderizar();
+        }
+
+        function buscarAfiliado() {
+            filtroActual = document.getElementById('buscador').value;
+            page = 1;
+            renderizar();
+        }
+
+        function renderizar() {
+            const tbody = document.getElementById('tablaRecaudo');
+            const lista = getAfiliadosFiltrados();
+            const totalPag = Math.max(1, Math.ceil(lista.length / pageSize));
+            if (page > totalPag) page = totalPag;
+            const inicio = (page - 1) * pageSize;
+            const pagina = lista.slice(inicio, inicio + pageSize);
+
+            const totalAf = afiliados.length;
+            let alDia = 0, enDeuda = 0;
+            afiliados.forEach(a => { if (getMesesDeuda(a.id, a.fechaAfiliacion).length === 0) alDia++; else enDeuda++; });
+            const totalRec = pagos.reduce((s, p) => s + (p.valor || 0), 0);
+
+            document.getElementById('totalAfiliados').textContent = totalAf;
+            document.getElementById('usuariosAlDia').textContent = alDia;
+            document.getElementById('usuariosDeuda').textContent = enDeuda;
+            document.getElementById('totalRecaudado').textContent = '$' + totalRec.toLocaleString();
+            document.getElementById('totalMostrados').textContent = `Mostrando ${pagina.length} de ${lista.length}`;
+
+            if (!pagina.length) {
+                tbody.innerHTML = '<tr><td colspan="18"><div class="empty-state">' +
+                    (filtroActual ? '❌ No se encontraron resultados' : '📭 No hay afiliados registrados') +
+                    '</div></td></tr>';
+                document.getElementById('pageInfo').textContent = 'Página 1 de 1';
+                return;
+            }
+
+            tbody.innerHTML = pagina.map(a => {
+                const deuda = calcularDeuda(a);
+                const badges = deuda > 0
+                    ? `<span class="badge-deuda badge-debe">$${deuda.toLocaleString()}</span>`
+                    : `<span class="badge-deuda badge-al-dia">AL DÍA</span>`;
+                const urlDetalle = `onclick="abrirHistorial('${a.id}')"`;
+                const mesesHtml = MESES_CORTOS.map((_, m) => {
+                    const est = getEstadoMes(a.id, a.fechaAfiliacion, new Date().getFullYear(), m);
+                    if (est === 'no-visible') return `<td><div class="month-box no-visible"></div></td>`;
+                    if (est === 'debe') return `<td><div class="month-box debe" onclick="abrirRecibo('${a.id}')"></div></td>`;
+                    if (est === 'pagado') return `<td><div class="month-box pagado"></div></td>`;
+                    return `<td><div class="month-box futuro"></div></td>`;
+                }).join('');
+
+                return `<tr>
+                    <td style="font-weight:600;color:#1e6e3e;">${a.cedula}</td>
+                    <td style="text-align:left;font-weight:500;">${a.nombres}</td>
+                    <td>${a.fechaAfiliacion || '-'}</td>
+                    <td>${badges}</td>
+                    <td><button class="btn btn-sm btn-primary" ${urlDetalle}>Ver</button></td>
+                    <td><span class="cell-recibo">${getUltimoRecibo(a.id)}</span></td>
+                    ${mesesHtml}
+                </tr>`;
+            }).join('');
+
+            document.getElementById('pageInfo').textContent = `Página ${page} de ${totalPag}`;
+            document.getElementById('prevPage').style.opacity = page <= 1 ? '0.4' : '1';
+            document.getElementById('nextPage').style.opacity = page >= totalPag ? '0.4' : '1';
+        }
+
+        document.getElementById('prevPage').onclick = () => { if (page > 1) { page--; renderizar(); } };
+        document.getElementById('nextPage').onclick = () => {
+            const total = Math.ceil(getAfiliadosFiltrados().length / pageSize);
+            if (page < total) { page++; renderizar(); }
+        };
+
+        // ===== RECIBO DE PAGO =====
+        function abrirRecibo(afiliadoId) {
+            const a = afiliados.find(x => x.id === afiliadoId);
+            if (!a) return;
+            const mesesDeuda = getMesesDeuda(a.id, a.fechaAfiliacion);
+            if (!mesesDeuda.length) { alert('✅ Este afiliado está al día'); return; }
+
+            pagoPendiente = { afiliadoId: a.id, mesesSeleccionados: [] };
+
+            document.getElementById('reciboInfo').innerHTML = `
+                <div style="display:flex;justify-content:space-between;align-items:center;">
+                    <span style="font-weight:700;color:#1e6e3e;font-size:0.95rem;">${a.nombres}</span>
+                    <span style="background:#d8ecd8;padding:3px 12px;border-radius:100px;font-size:0.7rem;font-weight:600;">${a.cedula}</span>
+                </div>
+                <div style="margin-top:6px;color:#721c24;font-size:0.8rem;">Debe ${mesesDeuda.length} mes(es) = $${(mesesDeuda.length*CUOTA).toLocaleString()}</div>
+            `;
+
+            document.getElementById('monthsChecklist').innerHTML = mesesDeuda.map(m => {
+                const [anio, mes] = m.split('-').map(Number);
+                const d = new Date(anio, mes-1, 1);
+                const label = d.toLocaleDateString('es-ES', { year:'numeric', month:'long' });
+                return `<div class="month-check-item" data-key="${m}">
+                    <input type="checkbox" class="check-mes" value="${m}" data-anio="${anio}" data-mes="${mes}">
+                    <span class="nombre-mes">${label}</span>
+                    <span class="valor-mes">$${CUOTA.toLocaleString()}</span>
+                </div>`;
+            }).join('');
+
+            document.getElementById('reciboNumero').value = document.getElementById('nextRecibo').textContent;
+            document.getElementById('fechaPago').value = new Date().toISOString().split('T')[0];
+            actualizarTotalPago();
+            document.getElementById('modalRecibo').style.display = 'flex';
+
+            document.querySelectorAll('.check-mes').forEach(cb => {
+                cb.addEventListener('change', actualizarTotalPago);
+            });
+            document.querySelectorAll('.month-check-item').forEach(item => {
+                item.addEventListener('click', function(e) {
+                    if (e.target.tagName !== 'INPUT') {
+                        const cb = this.querySelector('.check-mes');
+                        cb.checked = !cb.checked;
+                        actualizarTotalPago();
+                    }
+                });
+            });
+        }
+
+        function actualizarTotalPago() {
+            let total = 0;
+            document.querySelectorAll('.check-mes:checked').forEach(cb => { total += CUOTA; });
+            document.getElementById('totalPago').textContent = 'Total: $' + total.toLocaleString();
+        }
+
+        function cerrarModalRecibo() { document.getElementById('modalRecibo').style.display = 'none'; pagoPendiente = null; }
+
+        async function guardarPago() {
+            if (!pagoPendiente) return;
+            const afiliadoId = pagoPendiente.afiliadoId;
+            const recibo = document.getElementById('reciboNumero').value.trim();
+            const fecha = document.getElementById('fechaPago').value;
+            if (!recibo || !/^\d{5}$/.test(recibo)) { alert('El recibo debe tener 5 dígitos (ej: 00001)'); return; }
+
+            const checks = document.querySelectorAll('.check-mes:checked');
+            if (!checks.length) { alert('Seleccione al menos un mes'); return; }
+
+            var mesesPagados = [];
+            checks.forEach(function(cb) {
+                var anio = parseInt(cb.dataset.anio);
+                var mes = parseInt(cb.dataset.mes);
+                mesesPagados.push({anio: anio, mes: mes});
+            });
+
+            var totalValor = mesesPagados.length * CUOTA;
+
+            var nuevoPago = {
+                id: Date.now().toString() + Math.random(),
+                afiliadoId: afiliadoId,
+                valor: totalValor,
+                fecha: fecha,
+                meses: mesesPagados,
+                recibo: recibo,
+                fechaRegistro: new Date().toISOString()
+            };
+            pagos.push(nuevoPago);
+
+            await guardarPagos();
+            renderizar();
+            cerrarModalRecibo();
+
+            var confirmarRecibo = confirm('Pago registrado - Recibo N\u00B0 ' + recibo + '\n\n\u00BFDesea generar el recibo de pago para enviar por WhatsApp?');
+            if (confirmarRecibo) {
+                generarRecibo(afiliadoId, recibo, fecha, mesesPagados);
+            }
+        }
+
+        function generarRecibo(afiliadoId, recibo, fecha, mesesPagados) {
+            const a = afiliados.find(x => x.id === afiliadoId);
+            if (!a) return;
+
+            const mesesLabels = mesesPagados.map(m => {
+                const d = new Date(m.anio, m.mes-1, 1);
+                return d.toLocaleDateString('es-ES', { year:'numeric', month:'long' });
+            });
+            const totalPago = mesesPagados.length * CUOTA;
+
+            const d = new Date();
+            const opciones = { weekday: 'long', year: 'numeric', month: 'long', day: 'numeric' };
+            const fechaHoy = d.toLocaleDateString('es-ES', opciones).replace(/^\w/, c => c.toUpperCase());
+
+            document.getElementById('reciboFechaGenerado').textContent = fechaHoy;
+            document.getElementById('reciboNumGenerado').textContent = recibo;
+            document.getElementById('reciboAfiliado').textContent = a.nombres;
+            document.getElementById('reciboCedula').textContent = a.cedula;
+            document.getElementById('reciboConcepto').textContent = `Cuota mensual - ${mesesLabels.join(', ')}`;
+            document.getElementById('reciboValor').textContent = '$' + totalPago.toLocaleString();
+
+            const fechaPago = new Date(fecha + 'T00:00:00');
+            const fechaPagoStr = fechaPago.toLocaleDateString('es-ES', { year:'numeric', month:'long', day:'numeric' });
+            document.getElementById('reciboFechaPago').textContent = fechaPagoStr;
+
+            const reciboData = {
+                afiliado: a.nombres,
+                cedula: a.cedula,
+                recibo: recibo,
+                meses: mesesLabels,
+                total: totalPago,
+                fecha: fechaPagoStr,
+                fechaGeneracion: fechaHoy
+            };
+            window.ultimoReciboData = reciboData;
+
+            document.getElementById('modalReciboGenerado').style.display = 'flex';
+        }
+
+        function enviarWhatsApp() {
+            const data = window.ultimoReciboData;
+            if (!data) return;
+
+            var msj = '';
+            msj += '🙏 ASEPRIGA\n\n';
+            msj += 'Gracias por hacer la contribución a la Asociación ASEPRIGA.\n\n';
+            msj += '🧾 Recibo N°: ' + data.recibo + '\n';
+            msj += '👤 Afiliado: ' + data.afiliado + '\n';
+            msj += '🆔 Cédula: ' + data.cedula + '\n';
+            msj += '📆 Meses: ' + data.meses.join(', ') + '\n';
+            msj += '💰 Valor: $' + data.total.toLocaleString() + '\n';
+            msj += '📅 Fecha de pago: ' + data.fecha + '\n';
+            msj += '✅ PAGADO\n\n';
+            msj += '_Generado el ' + data.fechaGeneracion + '_';
+
+            var url = 'https://wa.me/?text=' + encodeURIComponent(msj);
+            window.open(url, '_blank');
+        }
+
+        function descargarReciboPNG() {
+            var elem = document.getElementById('reciboImprimible');
+            if (typeof html2canvas === 'undefined') {
+                alert('Error: La librería html2canvas no se cargó. Verifique su conexión a internet.');
+                return;
+            }
+            html2canvas(elem, { scale: 2, backgroundColor: '#ffffff', useCORS: true }).then(function(canvas) {
+                var reciboNum = 'desconocido';
+                if (window.ultimoReciboData && window.ultimoReciboData.recibo) {
+                    reciboNum = window.ultimoReciboData.recibo;
+                }
+                var enlace = document.createElement('a');
+                enlace.download = 'recibo_ASEPRIGA_' + reciboNum + '.png';
+                enlace.href = canvas.toDataURL('image/png');
+                enlace.click();
+            }).catch(function(err) {
+                alert('No se pudo generar la imagen. Use la opción Imprimir.');
+            });
+        }
+
+        function imprimirRecibo() {
+            const data = window.ultimoReciboData;
+            if (!data) return;
+            const w = window.open('', '_blank');
+            w.document.write(`<!DOCTYPE html><html><head><meta charset="UTF-8"><title>Recibo ASEPRIGA</title>
+                <style>
+                    body { font-family: 'Segoe UI', Arial; padding: 40px; text-align: center; }
+                    .recibo { max-width: 380px; margin: 0 auto; border: 2px solid #1e6e3e; border-radius: 16px; padding: 24px; }
+                    h2 { color: #1e6e3e; margin-bottom: 4px; }
+                    .fecha { font-size: 0.75rem; color: #4a7a5a; font-weight: 600; margin-bottom: 12px; }
+                    .linea { border-top: 2px dashed #1e6e3e; border-bottom: 2px dashed #1e6e3e; padding: 12px 0; margin: 8px 0; }
+                    .label-recibo { font-size: 0.7rem; color: #666; }
+                    .num-recibo { font-size: 1.5rem; font-weight: 700; color: #1e6e3e; }
+                    .detalle { text-align: left; padding: 8px 0; font-size: 0.85rem; }
+                    .detalle div { display: flex; justify-content: space-between; padding: 3px 0; }
+                    .linea2 { border-top: 2px dashed #1e6e3e; padding-top: 10px; margin-top: 8px; }
+                    .pagado { background: #1e6e3e; color: white; padding: 4px 20px; border-radius: 100px; font-size: 0.7rem; font-weight: 700; display: inline-block; }
+                </style>
+            </head><body>
+                <div class="recibo">
+                    <h2>ASEPRIGA</h2>
+                    <div class="fecha">${data.fechaGeneracion}</div>
+                    <div class="linea">
+                        <div class="label-recibo">RECIBO N°</div>
+                        <div class="num-recibo">${data.recibo}</div>
+                    </div>
+                    <div class="detalle">
+                        <div><strong>Afiliado:</strong> <span>${data.afiliado}</span></div>
+                        <div><strong>Cédula:</strong> <span>${data.cedula}</span></div>
+                        <div><strong>Concepto:</strong> <span>${data.meses.join(', ')}</span></div>
+                        <div><strong>Valor:</strong> <span style="font-weight:700;color:#27ae60;">$${data.total.toLocaleString()}</span></div>
+                        <div><strong>Fecha pago:</strong> <span>${data.fecha}</span></div>
+                    </div>
+                    <div class="linea2">
+                        <span class="pagado">PAGADO</span>
+                    </div>
+                </div>
+            </body></html>`);
+            w.document.close();
+            setTimeout(() => w.print(), 300);
+        }
+
+        // ===== HISTORIAL DE PAGOS =====
+        function abrirHistorial(afiliadoId) {
+            const a = afiliados.find(x => x.id === afiliadoId);
+            if (!a) return;
+            document.getElementById('historialTitle').textContent = `📋 ${a.nombres}`;
+
+            const afPagos = getPagosAfiliado(a.id).sort(function(x,y) { return new Date(y.fechaRegistro) - new Date(x.fechaRegistro); });
+            const mesesDeuda = getMesesDeuda(a.id, a.fechaAfiliacion);
+            const deudaTotal = mesesDeuda.length * CUOTA;
+
+            let html = `
+                <div style="display:grid;grid-template-columns:repeat(4,1fr);gap:8px;margin-bottom:14px;text-align:center;">
+                    <div style="background:#f0f8f0;padding:8px;border-radius:10px;">
+                        <div style="font-size:0.6rem;color:#4a6b4a;text-transform:uppercase;">Pagados</div>
+                        <div style="font-size:1.2rem;font-weight:700;color:#27ae60;">${afPagos.length}</div>
+                    </div>
+                    <div style="background:#f0f8f0;padding:8px;border-radius:10px;">
+                        <div style="font-size:0.6rem;color:#4a6b4a;text-transform:uppercase;">Total Pagado</div>
+                        <div style="font-size:1.2rem;font-weight:700;color:#27ae60;">$${(afPagos.reduce((s,p)=>s+p.valor,0)).toLocaleString()}</div>
+                    </div>
+                    <div style="background:#fff0f0;padding:8px;border-radius:10px;">
+                        <div style="font-size:0.6rem;color:#4a6b4a;text-transform:uppercase;">Meses Debe</div>
+                        <div style="font-size:1.2rem;font-weight:700;color:#e74c3c;">${mesesDeuda.length}</div>
+                    </div>
+                    <div style="background:#fff0f0;padding:8px;border-radius:10px;">
+                        <div style="font-size:0.6rem;color:#4a6b4a;text-transform:uppercase;">Deuda Total</div>
+                        <div style="font-size:1.2rem;font-weight:700;color:#e74c3c;">$${deudaTotal.toLocaleString()}</div>
+                    </div>
+                </div>
+                <div style="margin-bottom:12px;font-size:0.8rem;display:flex;gap:10px;flex-wrap:wrap;">
+                    <span><strong>Cédula:</strong> ${a.cedula}</span>
+                    <span><strong>Dirección:</strong> ${a.direccion || '-'}</span>
+                    <span><strong>Tel:</strong> ${a.telefono || '-'}</span>
+                    <span><strong>Afiliación:</strong> ${a.fechaAfiliacion || '-'}</span>
+                </div>
+            `;
+
+            const btnPagar = document.getElementById('btnPagarHistorial');
+            if (mesesDeuda.length > 0) {
+                btnPagar.style.display = 'inline-flex';
+                btnPagar.onclick = () => { cerrarModalHistorial(); abrirRecibo(a.id); };
+            } else {
+                btnPagar.style.display = 'none';
+            }
+
+            if (afPagos.length === 0) {
+                html += '<div class="empty-state">No hay pagos registrados</div>';
+            } else {
+                html += '<table style="font-size:0.75rem;width:100%;"><thead><tr style="background:#1e6e3e;color:white;">' +
+                    '<th style="padding:8px;">Fecha</th><th style="padding:8px;">Meses</th><th style="padding:8px;">Valor</th>' +
+                    '<th style="padding:8px;">Recibo</th></tr></thead><tbody>';
+                afPagos.forEach(function(p) {
+                    var mesesLabel = '';
+                    if (p.meses && Array.isArray(p.meses)) {
+                        mesesLabel = p.meses.map(function(m) {
+                            var d = new Date(m.anio, m.mes - 1, 1);
+                            return d.toLocaleDateString('es-ES', { year:'numeric', month:'long' });
+                        }).join(', ');
+                    } else if (p.anio && p.mes) {
+                        var d = new Date(p.anio, p.mes - 1, 1);
+                        mesesLabel = d.toLocaleDateString('es-ES', { year:'numeric', month:'long' });
+                    }
+                    html += '<tr style="border-bottom:1px solid #d8ecd8;">' +
+                        '<td style="padding:6px;">' + p.fecha + '</td>' +
+                        '<td style="padding:6px;text-transform:capitalize;font-size:0.7rem;">' + mesesLabel + '</td>' +
+                        '<td style="padding:6px;font-weight:700;color:#27ae60;">$' + p.valor.toLocaleString() + '</td>' +
+                        '<td style="padding:6px;"><span class="cell-recibo">' + p.recibo + '</span></td>' +
+                        '</tr>';
+                });
+                html += '</tbody></table>';
+            }
+
+            if (mesesDeuda.length > 0) {
+                html += '<h4 style="color:#e74c3c;margin-top:14px;margin-bottom:8px;">⚠️ Meses Pendientes</h4>';
+                html += '<div style="background:#fff0f0;padding:10px;border-radius:10px;border:1px solid #e0b0b0;">';
+                mesesDeuda.forEach(m => {
+                    const [anio, mes] = m.split('-').map(Number);
+                    const d = new Date(anio, mes-1, 1);
+                    html += `<div style="display:flex;justify-content:space-between;padding:3px 0;border-bottom:1px solid #ffd0d0;">
+                        <span style="text-transform:capitalize;font-weight:600;">${d.toLocaleDateString('es-ES', { year:'numeric', month:'long' })}</span>
+                        <span style="font-weight:700;color:#e74c3c;">$${CUOTA.toLocaleString()}</span>
+                    </div>`;
+                });
+                html += '</div>';
+            } else {
+                html += '<div style="background:#d4edda;padding:14px;border-radius:10px;text-align:center;margin-top:10px;font-weight:700;color:#155724;">✅ AL DÍA - No tiene deudas</div>';
+            }
+
+            document.getElementById('historialContent').innerHTML = html;
+            document.getElementById('modalHistorial').style.display = 'flex';
+        }
+
+        function cerrarModalHistorial() { document.getElementById('modalHistorial').style.display = 'none'; }
+
+        document.getElementById('modalRecibo').addEventListener('click', function(e) { if (e.target === this) cerrarModalRecibo(); });
+        document.getElementById('modalHistorial').addEventListener('click', function(e) { if (e.target === this) cerrarModalHistorial(); });
+        document.getElementById('modalReciboGenerado').addEventListener('click', function(e) { if (e.target === this) this.style.display = 'none'; });
+        document.addEventListener('keydown', function(e) {
+            if (e.key === 'Escape') { cerrarModalRecibo(); cerrarModalHistorial(); document.getElementById('modalReciboGenerado').style.display = 'none'; }
+        });
+    </script>
+</body>
+</html>
