@@ -99,6 +99,8 @@
                 errorDiv.style.display = 'none';
                 sessionStorage.setItem('usuario_activo', usuario);
                 sessionStorage.setItem('usuario_rol', USUARIOS[usuario].label);
+                var flag = usuario === 'Tesorera' ? 'sesion_recaudo' : 'sesion_afiliacion';
+                sessionStorage.setItem(flag, Date.now().toString());
                 window.location.href = USUARIOS[usuario].destino;
             } else {
                 errorDiv.style.display = 'block';

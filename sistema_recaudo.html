@@ -7,7 +7,7 @@
     <style>
         * { margin: 0; padding: 0; box-sizing: border-box; font-family: 'Segoe UI', Roboto, sans-serif; }
         body { background: linear-gradient(145deg, #1e6e3e, #2d8f56); min-height: 100vh; display: flex; justify-content: center; padding: 10px; }
-        .app { max-width: 1400px; width: 100%; background: white; border-radius: 28px; padding: 12px; box-shadow: 0 15px 35px rgba(0,0,0,0.15); }
+        .app { max-width: 1400px; width: 100%; background: white; border-radius: 28px; padding: 12px; box-shadow: 0 15px 35px rgba(0,0,0,0.15); position: relative; }
         .header { text-align: center; margin-bottom: 8px; }
         .header h1 { font-size: 1.5rem; color: #1e6e3e; margin-bottom: 2px; }
         .header .fecha { font-size: 0.8rem; font-weight: 700; color: #4a7a5a; margin-bottom: 8px; }
@@ -112,9 +112,8 @@
         <div class="header">
             <h1>ASEPRIGA</h1>
             <div class="fecha" id="fechaDisplay"></div>
-            <div style="display:flex;justify-content:center;gap:6px;flex-wrap:wrap;">
-                <button class="btn btn-success" onclick="location.href='sistema_afiliacion.html'">👥 Afiliados</button>
-                
+            <div style="position:absolute;top:12px;right:16px;">
+                <button class="btn btn-danger" onclick="cerrarSesion()">🚪 Salir</button>
             </div>
         </div>
 
@@ -172,7 +171,7 @@
     </div>
 
     <!-- MODAL TOKEN GITHUB -->
-    <div id="modalToken" class="modal" style="display:flex;">
+    <div id="modalToken" class="modal" style="display:none;">
         <div class="modal-content" style="max-width:400px;">
             <div class="modal-header">
                 <h3>🔑 Token de GitHub</h3>
@@ -270,8 +269,10 @@
     </div>
 
     <script>
-        var usuario = sessionStorage.getItem('usuario_activo');
-        if (!usuario || usuario !== 'Tesorera') { window.location.href = 'index.html'; }
+        // Consumir flag de sesión (se elimina al leer, así en recarga no existe)
+        var sesionOk = sessionStorage.getItem('sesion_recaudo');
+        sessionStorage.removeItem('sesion_recaudo');
+        if (!sesionOk) { window.location.href = 'index.html'; }
 
         const CUOTA = 10000;
         const MESES = ['Enero','Febrero','Marzo','Abril','Mayo','Junio','Julio','Agosto','Septiembre','Octubre','Noviembre','Diciembre'];
@@ -356,6 +357,21 @@
         }
         actualizarFecha();
 
+        // Inactividad: 30 minutos
+        var INACTIVIDAD_MS = 30 * 60 * 1000;
+        function actualizarActividad() { sessionStorage.setItem('ultima_actividad_recaudo', Date.now()); }
+        function verificarInactividad() {
+            var ultima = parseInt(sessionStorage.getItem('ultima_actividad_recaudo')) || 0;
+            if (ultima && Date.now() - ultima > INACTIVIDAD_MS) cerrarSesion();
+        }
+        function cerrarSesion() { sessionStorage.clear(); window.location.href = 'index.html'; }
+        document.addEventListener('click', actualizarActividad);
+        document.addEventListener('keypress', actualizarActividad);
+        document.addEventListener('mousemove', actualizarActividad);
+        document.addEventListener('touchstart', actualizarActividad);
+        setInterval(verificarInactividad, 30000);
+        actualizarActividad();
+
         async function cargarDatos() {
             try {
                 var resAfiliados = await githubLeer('afiliaciones.json');
@@ -382,7 +398,7 @@
             renderizar();
         }
 
-        if (tokenGuardado()) { cargarDatos(); }
+        if (tokenGuardado()) { cargarDatos(); } else { document.getElementById('modalToken').style.display = 'flex'; }
         async function migrarPagos() {
             var cambios = false;
             for (var i = 0; i < pagos.length; i++) {

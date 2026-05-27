@@ -7,7 +7,7 @@
     <style>
         * { margin: 0; padding: 0; box-sizing: border-box; font-family: 'Segoe UI', Roboto, sans-serif; }
         body { background: linear-gradient(145deg, #1a3c6e, #2a5298); min-height: 100vh; display: flex; justify-content: center; padding: 10px; }
-        .app { max-width: 1200px; width: 100%; background: white; border-radius: 28px; padding: 20px; box-shadow: 0 15px 35px rgba(0,0,0,0.15); }
+        .app { max-width: 1200px; width: 100%; background: white; border-radius: 28px; padding: 20px; box-shadow: 0 15px 35px rgba(0,0,0,0.15); position: relative; }
         .header { text-align: center; margin-bottom: 16px; }
         .header h1 { font-size: 1.5rem; color: #1a3c6e; margin-bottom: 2px; }
         .header .fecha { font-size: 0.8rem; font-weight: 700; color: #4a6b8a; margin-bottom: 10px; }
@@ -67,12 +67,13 @@
         <div class="header">
             <h1>ASEPRIGA</h1>
             <div class="fecha" id="fechaDisplay"></div>
-            <div class="header-actions">
-                <button class="btn btn-success" onclick="abrirModal()">+ Nuevo</button>
+            <div class="header-actions" style="position:absolute;top:12px;right:16px;">
+                <button class="btn btn-danger" onclick="cerrarSesion()">🚪 Salir</button>
             </div>
         </div>
 
         <div class="action-bar">
+            <button class="btn btn-success" onclick="abrirModal()">+ Nuevo</button>
             <div class="search-box">
                 <span>🔍</span>
                 <input type="text" id="buscador" placeholder="Buscar por nombre, cédula..." onkeyup="filtrarTabla()">
@@ -101,7 +102,7 @@
     </div>
 
     <!-- MODAL TOKEN GITHUB -->
-    <div id="modalToken" class="modal" style="display:flex;">
+    <div id="modalToken" class="modal" style="display:none;">
         <div class="modal-content" style="max-width:400px;">
             <div class="modal-header">
                 <h3>🔑 Token de GitHub</h3>
@@ -138,8 +139,10 @@
     </div>
 
     <script>
-        var usuario = sessionStorage.getItem('usuario_activo');
-        if (!usuario || usuario !== 'Secretaria') { window.location.href = 'index.html'; }
+        // Consumir flag de sesión (se elimina al leer, así en recarga no existe)
+        var sesionOk = sessionStorage.getItem('sesion_afiliacion');
+        sessionStorage.removeItem('sesion_afiliacion');
+        if (!sesionOk) { window.location.href = 'index.html'; }
 
         let afiliados = [];
         let shaAfiliaciones = null;
@@ -222,6 +225,21 @@
         }
         actualizarFecha();
 
+        // Inactividad: 30 minutos
+        var INACTIVIDAD_MS = 30 * 60 * 1000;
+        function actualizarActividad() { sessionStorage.setItem('ultima_actividad_afiliacion', Date.now()); }
+        function verificarInactividad() {
+            var ultima = parseInt(sessionStorage.getItem('ultima_actividad_afiliacion')) || 0;
+            if (ultima && Date.now() - ultima > INACTIVIDAD_MS) cerrarSesion();
+        }
+        function cerrarSesion() { sessionStorage.clear(); window.location.href = 'index.html'; }
+        document.addEventListener('click', actualizarActividad);
+        document.addEventListener('keypress', actualizarActividad);
+        document.addEventListener('mousemove', actualizarActividad);
+        document.addEventListener('touchstart', actualizarActividad);
+        setInterval(verificarInactividad, 30000);
+        actualizarActividad();
+
         async function cargarDatos() {
             try {
                 var resultado = await githubLeer('afiliaciones.json');
@@ -239,7 +257,7 @@
             renderizarTabla();
         }
 
-        if (tokenGuardado()) { cargarDatos(); }
+        if (tokenGuardado()) { cargarDatos(); } else { document.getElementById('modalToken').style.display = 'flex'; }
 
         async function guardarDatos() {
             try {
